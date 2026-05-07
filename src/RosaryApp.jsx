@@ -1,5 +1,6 @@
 
 import React, { useEffect, useMemo, useState } from "react";
+import { PRAYERS, ROSARY_PRAYER_KEYS, OTHER_PRAYER_KEYS } from "./data/prayers";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -311,77 +312,59 @@ export default function RosaryTrackerAppPrototype() {
   const [prayerLang, setPrayerLang] = useState("en");
   const [showPron, setShowPron] = useState(false);
   const [pronType, setPronType] = useState("simple");
-  // Add this state with your other states (around line 240)
-  const [mirrorToFitbit, setMirrorToFitbit] = useState(false);
 
   const totalDecadesDone = useMemo(() => sets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0), [sets]);
   const mysteriesCompleted = useMemo(() => sets.filter((s) => s.decades.every(Boolean)).length, [sets]);
   const closingEnabled = mysteriesCompleted >= 1;
   const dailyPct = Math.min(100, Math.round((totalDecadesDone / DAILY_DECADE_GOAL) * 100));
 
-  const sendNotification = (title, body) => {
-  if (!mirrorToFitbit || !("Notification" in window)) return;
-  
-  if (Notification.permission === "granted") {
-    new Notification(title, { body, icon: "/icon-192x192.png" });
-  } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then(permission => {
-      if (permission === "granted") {
-        new Notification(title, { body });
-      }
-    });
-  }
-};
-
-
-// --- FINAL CARPLAY / SIRI LOGIC WITH IMPROVED VOICE ---
+  // --- COMBINED CARPLAY / SIRI LOGIC ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
 
-    // Helper to get a better-sounding voice (Samantha or Siri)
-    const speakWithBestVoice = (text) => {
-      const speech = new SpeechSynthesisUtterance(text);
-      const voices = window.speechSynthesis.getVoices();
-      // Look for "Premium", "Enhanced", or "Siri" voices
-      const premiumVoice = voices.find(v => 
-        (v.name.includes("Premium") || v.name.includes("Enhanced") || v.name.includes("Siri")) && v.lang.startsWith("en")
-      );
-      if (premiumVoice) speech.voice = premiumVoice;
-      speech.rate = 0.9; // Slightly slower for better clarity in the car
-      window.speechSynthesis.speak(speech);
-    };
-
+    // Handle "Mark Decade" command
     if (action === 'markDecade') {
       setSets(prevSets => {
         const setIndex = prevSets.findIndex(s => s.decades.includes(false));
+        
         if (setIndex !== -1) {
-          const updatedSet = { ...prevSets[setIndex], decades: [...prevSets[setIndex].decades] };
+          // 1. Create a deep copy of the specific set to ensure React detects the change
+          const updatedSet = { 
+            ...prevSets[setIndex], 
+            decades: [...prevSets[setIndex].decades] 
+          };
+          
+          // 2. Mark the first available 'false' as 'true'
           const decadeIndex = updatedSet.decades.indexOf(false);
           updatedSet.decades[decadeIndex] = true;
 
+          // 3. Create a new array for the state update
           const newSets = [...prevSets];
           newSets[setIndex] = updatedSet;
-          
-          // Calculate new total immediately for the voice
-          const newTotal = newSets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0);
-          speakWithBestVoice(`Decade marked. You have completed ${newTotal} today.`);
+
+          // 4. Voice feedback
+          const speech = new SpeechSynthesisUtterance("Decade marked complete.");
+          window.speechSynthesis.speak(speech);
           
           return newSets;
         }
-        const newTotal = newSets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0);
-        sendNotification("Rosary Progress", `Decade marked! Today: ${newTotal}/${DAILY_DECADE_GOAL}`);
         return prevSets;
       });
+
+      // Clear the URL to prevent double-triggering on refresh
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
+    // Handle "Get Status" command
     if (action === 'getStatus') {
-      // Force a tiny delay to ensure Safari has loaded the latest data from storage
-      setTimeout(() => {
-        const msg = `Status update: ${totalDecadesDone} decades completed. ${DAILY_DECADE_GOAL - totalDecadesDone} remaining.`;
-        speakWithBestVoice(msg);
-      }, 100);
+      const remaining = DAILY_DECADE_GOAL - totalDecadesDone;
+      const msg = `You have completed ${totalDecadesDone} decades. You have ${remaining} left to reach your daily goal.`;
+      
+      const speech = new SpeechSynthesisUtterance(msg);
+      window.speechSynthesis.speak(speech);
+
+      // Clear the URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [totalDecadesDone, dayKey]);
@@ -513,30 +496,6 @@ export default function RosaryTrackerAppPrototype() {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-2xl border p-3 bg-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Watch className="h-4 w-4 text-slate-600" />
-                      <span className="text-sm font-medium">Fitbit Charge 6 (iPhone)</span>
-                    </div>
-                    <Switch 
-                      checked={mirrorToFitbit} 
-                      onCheckedChange={(val) => {
-                        setMirrorToFitbit(val);
-                        if (val) Notification.requestPermission();
-                      }} 
-                    />
-                  </div>
-                  <ul className="text-[10px] text-slate-500 list-disc pl-5 space-y-1">
-                    <li>Glance-only: shows iPhone notifications like "Today: 7/15 decades".</li>
-                    <li>Check-offs happen on iPhone; Fitbit does not send actions back.</li>
-                  </ul>
-                  <div className="mt-3 pt-3 border-t flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mirror status to Fitbit</span>
-                    <div className={`h-2 w-2 rounded-full ${mirrorToFitbit ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                  </div>
-                </Card>
-
                 <Card className="md:col-span-2 rounded-2xl shadow-sm">
                   <CardHeader><CardTitle className="text-lg">Mystery Sets</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
@@ -563,8 +522,6 @@ export default function RosaryTrackerAppPrototype() {
                     </AnimatePresence>
                   </CardContent>
                 </Card>
-
-
               </div>
             </TabsContent>
 
