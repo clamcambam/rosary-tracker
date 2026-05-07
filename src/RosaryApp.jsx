@@ -311,11 +311,28 @@ export default function RosaryTrackerAppPrototype() {
   const [prayerLang, setPrayerLang] = useState("en");
   const [showPron, setShowPron] = useState(false);
   const [pronType, setPronType] = useState("simple");
+  // Add this state with your other states (around line 240)
+  const [mirrorToFitbit, setMirrorToFitbit] = useState(false);
 
   const totalDecadesDone = useMemo(() => sets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0), [sets]);
   const mysteriesCompleted = useMemo(() => sets.filter((s) => s.decades.every(Boolean)).length, [sets]);
   const closingEnabled = mysteriesCompleted >= 1;
   const dailyPct = Math.min(100, Math.round((totalDecadesDone / DAILY_DECADE_GOAL) * 100));
+
+  const sendNotification = (title, body) => {
+  if (!mirrorToFitbit || !("Notification" in window)) return;
+  
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon: "/icon-192x192.png" });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        new Notification(title, { body });
+      }
+    });
+  }
+};
+
 
 // --- FINAL CARPLAY / SIRI LOGIC WITH IMPROVED VOICE ---
   useEffect(() => {
@@ -352,6 +369,8 @@ export default function RosaryTrackerAppPrototype() {
           
           return newSets;
         }
+        const newTotal = newSets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0);
+        sendNotification("Rosary Progress", `Decade marked! Today: ${newTotal}/${DAILY_DECADE_GOAL}`);
         return prevSets;
       });
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -519,6 +538,30 @@ export default function RosaryTrackerAppPrototype() {
                       })}
                     </AnimatePresence>
                   </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border p-3 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Watch className="h-4 w-4 text-slate-600" />
+                      <span className="text-sm font-medium">Fitbit Charge 6 (iPhone)</span>
+                    </div>
+                    <Switch 
+                      checked={mirrorToFitbit} 
+                      onCheckedChange={(val) => {
+                        setMirrorToFitbit(val);
+                        if (val) Notification.requestPermission();
+                      }} 
+                    />
+                  </div>
+                  <ul className="text-[10px] text-slate-500 list-disc pl-5 space-y-1">
+                    <li>Glance-only: shows iPhone notifications like "Today: 7/15 decades".</li>
+                    <li>Check-offs happen on iPhone; Fitbit does not send actions back.</li>
+                  </ul>
+                  <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mirror status to Fitbit</span>
+                    <div className={`h-2 w-2 rounded-full ${mirrorToFitbit ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                  </div>
                 </Card>
               </div>
             </TabsContent>
