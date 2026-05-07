@@ -513,6 +513,30 @@ export default function RosaryTrackerAppPrototype() {
                   </CardContent>
                 </Card>
 
+                <Card className="rounded-2xl border p-3 bg-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Watch className="h-4 w-4 text-slate-600" />
+                      <span className="text-sm font-medium">Fitbit Charge 6 (iPhone)</span>
+                    </div>
+                    <Switch 
+                      checked={mirrorToFitbit} 
+                      onCheckedChange={(val) => {
+                        setMirrorToFitbit(val);
+                        if (val) Notification.requestPermission();
+                      }} 
+                    />
+                  </div>
+                  <ul className="text-[10px] text-slate-500 list-disc pl-5 space-y-1">
+                    <li>Glance-only: shows iPhone notifications like "Today: 7/15 decades".</li>
+                    <li>Check-offs happen on iPhone; Fitbit does not send actions back.</li>
+                  </ul>
+                  <div className="mt-3 pt-3 border-t flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mirror status to Fitbit</span>
+                    <div className={`h-2 w-2 rounded-full ${mirrorToFitbit ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                  </div>
+                </Card>
+
                 <Card className="md:col-span-2 rounded-2xl shadow-sm">
                   <CardHeader><CardTitle className="text-lg">Mystery Sets</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
@@ -540,29 +564,7 @@ export default function RosaryTrackerAppPrototype() {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-2xl border p-3 bg-white">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Watch className="h-4 w-4 text-slate-600" />
-                      <span className="text-sm font-medium">Fitbit Charge 6 (iPhone)</span>
-                    </div>
-                    <Switch 
-                      checked={mirrorToFitbit} 
-                      onCheckedChange={(val) => {
-                        setMirrorToFitbit(val);
-                        if (val) Notification.requestPermission();
-                      }} 
-                    />
-                  </div>
-                  <ul className="text-[10px] text-slate-500 list-disc pl-5 space-y-1">
-                    <li>Glance-only: shows iPhone notifications like "Today: 7/15 decades".</li>
-                    <li>Check-offs happen on iPhone; Fitbit does not send actions back.</li>
-                  </ul>
-                  <div className="mt-3 pt-3 border-t flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Mirror status to Fitbit</span>
-                    <div className={`h-2 w-2 rounded-full ${mirrorToFitbit ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                  </div>
-                </Card>
+
               </div>
             </TabsContent>
 
