@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { PRAYERS, ROSARY_PRAYER_KEYS, OTHER_PRAYER_KEYS } from "./data/prayers";
+import { PRAYERS, ROSARY_PRAYER_KEYS, OTHER_PRAYER_KEYS } from "./data/prayer";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
