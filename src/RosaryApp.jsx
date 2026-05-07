@@ -1,33 +1,113 @@
-import React, { useEffect, useMemo, useState, createContext, useContext } from "react";
+
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import {
-  CheckCircle2, Circle, RotateCcw, Plus, Languages, BookOpen, Lock,
-  MessageSquareText, Sparkles, Mic2, BarChart3, History, Trophy
+  CheckCircle2,
+  Circle,
+  RotateCcw,
+  Watch,
+  Shield,
+  Plus,
+  Languages,
+  BookOpen,
+  Lock,
+  MessageSquareText,
+  Sparkles,
+  Mic2,
+  BarChart3,
+  History,
+  Trophy
 } from "lucide-react";
 
-// --- Standalone UI Components (Baking in the missing Shadcn parts) ---
-const Card = ({ children, className = "" }) => <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden ${className}`}>{children}</div>;
-const CardHeader = ({ children, className = "" }) => <div className={`p-4 border-b border-slate-50 ${className}`}>{children}</div>;
-const CardTitle = ({ children, className = "" }) => <h3 className={`text-lg font-semibold tracking-tight ${className}`}>{children}</h3>;
-const CardContent = ({ children, className = "" }) => <div className={`p-4 ${className}`}>{children}</div>;
-const Progress = ({ value }) => (
-  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-    <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${value}%` }} />
-  </div>
-);
-const Badge = ({ children, variant = "default" }) => {
-  const styles = variant === "default" ? "bg-slate-900 text-white" : "bg-white text-slate-600 border border-slate-200";
-  return <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${styles}`}>{children}</span>;
+// ------------------------------
+// Tracker constants
+// ------------------------------
+const DAILY_DECADE_GOAL = 15;
+
+const MYSTERIES = [
+  { key: "joyful", label: "Joyful" },
+  { key: "sorrowful", label: "Sorrowful" },
+  { key: "glorious", label: "Glorious" },
+  { key: "luminous", label: "Luminous" },
+];
+
+const MYSTERY_DECADES = {
+  joyful: ["The Annunciation", "The Visitation", "The Nativity", "The Presentation", "The Finding in the Temple"],
+  sorrowful: ["The Agony in the Garden", "The Scourging at the Pillar", "The Crowning with Thorns", "The Carrying of the Cross", "The Crucifixion"],
+  glorious: ["The Resurrection", "The Ascension", "The Descent of the Holy Spirit", "The Assumption", "The Coronation of Mary"],
+  luminous: ["The Baptism of the Lord", "The Wedding Feast at Cana", "The Proclamation of the Kingdom", "The Transfiguration", "The Institution of the Eucharist"],
 };
 
-// --- Prayer Rendering Logic ---
+const OPENING_STEPS = [
+  "The Apostles’ Creed",
+  "1 Our Father (for the intentions of the Pope)",
+  "3 Hail Marys (for an increase in Faith, Hope, & Charity)",
+  "1 Glory Be",
+  "Offer intentions",
+];
+
+const CLOSING_STEPS = [
+  "Salve Regina (Hail Holy Queen)",
+  "V. Pray for us, O holy Mother of God. / R. That we may be made worthy of the promises of Christ.",
+  "Rosary Prayer (Let us pray…)",
+  "The Memorare",
+];
+
+// ------------------------------
+// Helpers
+// ------------------------------
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr + "T12:00:00");
+  return date.toLocaleDateString("en-US", { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function suggestedMysteryKeyForToday() {
+  const day = new Date().getDay();
+  if (day === 0 || day === 3) return "glorious";
+  if (day === 1 || day === 6) return "joyful";
+  if (day === 2 || day === 5) return "sorrowful";
+  return "luminous";
+}
+
+function mysteryLabel(key) { return MYSTERIES.find((m) => m.key === key)?.label ?? "Mystery"; }
+
+function emptySet(mystery) {
+  return { id: crypto.randomUUID(), createdAt: new Date().toISOString(), mystery, decades: [false, false, false, false, false] };
+}
+
+function splitLines(s) { return String(s || "").split("\n"); }
+
+function padTo(lines, targetLen) {
+  const out = [...(lines || [])];
+  while (out.length < targetLen) out.push("");
+  return out;
+}
+
+// ------------------------------
+// Helper UI Components (Crucial for Prayer Tabs)
+// ------------------------------
 function LinePair({ original, pron, showPron, pronLabel }) {
   return (
-    <div className="rounded-xl border border-slate-100 p-3 mb-2 bg-white shadow-sm">
-      <div className="text-sm text-slate-800 whitespace-pre-line leading-relaxed">{original}</div>
-      {showPron && pron && (
-        <div className="mt-2 text-xs text-slate-500 italic border-t border-slate-50 pt-2">
-          <span className="font-bold text-slate-400">{pronLabel}: </span>{pron}
+    <div className="rounded-xl border border-slate-200 p-3">
+      <div className="text-sm text-slate-800 whitespace-pre-line">{original || " "}</div>
+      {showPron && pron != null && pron !== "" && (
+        <div className="mt-2 text-xs text-slate-600 whitespace-pre-line">
+          <span className="font-medium">{pronLabel}: </span>{pron}
         </div>
       )}
     </div>
@@ -35,40 +115,30 @@ function LinePair({ original, pron, showPron, pronLabel }) {
 }
 
 function PrayerBlock({ title, body, pron, showPron, pronLabel }) {
-  const lines = (body || "").split("\n").filter(l => l.trim() !== "");
-  const pronLines = Array.isArray(pron) ? pron : [];
+  const lines = splitLines(body);
+  const pronLines = pron ? padTo(pron, lines.length) : null;
   return (
-    <div className="mb-8 text-left">
-      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">{title}</div>
-      {lines.map((ln, idx) => (
-        <LinePair key={idx} original={ln} pron={pronLines[idx]} showPron={showPron} pronLabel={pronLabel} />
-      ))}
+    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="font-medium mb-2">{title}</div>
+      <div className="space-y-2">
+        {lines.map((ln, idx) => (
+          <LinePair key={idx} original={ln} pron={pronLines ? pronLines[idx] : null} showPron={showPron} pronLabel={pronLabel} />
+        ))}
+      </div>
     </div>
   );
 }
 
-// --- Data Constants ---
-const DAILY_DECADE_GOAL = 15;
-const MYSTERIES = [
-  { key: "joyful", label: "Joyful" }, { key: "sorrowful", label: "Sorrowful" },
-  { key: "glorious", label: "Glorious" }, { key: "luminous", label: "Luminous" },
-];
-const MYSTERY_DECADES = {
-  joyful: ["The Annunciation", "The Visitation", "The Nativity", "The Presentation", "The Finding in the Temple"],
-  sorrowful: ["The Agony in the Garden", "The Scourging at the Pillar", "The Crowning with Thorns", "The Carrying of the Cross", "The Crucifixion"],
-  glorious: ["The Resurrection", "The Ascension", "The Descent of the Holy Spirit", "The Assumption", "The Coronation of Mary"],
-  luminous: ["The Baptism of the Lord", "The Wedding Feast at Cana", "The Proclamation of the Kingdom", "The Transfiguration", "The Institution of the Eucharist"],
-};
-const OPENING_STEPS = ["Apostles’ Creed", "1 Our Father", "3 Hail Marys", "1 Glory Be", "Offer Intentions"];
-const CLOSING_STEPS = ["Salve Regina", "V/R Response", "Rosary Prayer", "The Memorare"];
-
+// ------------------------------
+// Prayer Library Data
+// ------------------------------
 const PRAYERS = {
   apostles_creed: {
     title: "Apostles’ Creed",
     text: {
-      en: "I believe in God, the Father almighty, Creator of heaven and earth.\nI believe in Jesus Christ, His only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried; He descended into hell; on the third day He rose again from the dead; He ascended into heaven, and is seated at the right hand of God the Father almighty; from there He will come to judge the living and the dead.\nI believe in the Holy Spirit, the holy catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.",
-      la: "Credo in Deum, Patrem omnipotentem, Creatorem caeli et terrae.\nEt in Iesum Christum, Filium Eius unicum, Dominum nostrum, qui conceptus est de Spiritu Sancto, natus ex Maria Virgine, passus sub Pontio Pilato, crucifixus, mortuus et sepultus; descendit ad inferos; tertia die resurrexit a mortuis; ascendit ad caelos; sedet ad dexteram Dei Patris omnipotentis; inde venturus est iudicare vivos et mortuos.\nCredo in Spiritum Sanctum, sanctam Ecclesiam catholicam, sanctorum communionem, remissionem peccatorum, carnis resurrectionem, vitam aeternam. Amen.",
-      pl: "Wierzę w Boga, Ojca Wszechmogącego, Stworzyciela nieba i ziemi.\nI w Jezusa Chrystusa, Syna Jego Jedynego, Pana naszego, który się począł z Ducha Świętego, narodził się z Maryi Panny, umęczon pod Ponckim Piłatem, ukrzyżowan, umarł i pogrzebion; zstąpił do piekieł; trzeciego dnia zmartwychwstał; wstąpił na niebiosa, siedzi po prawicy Boga Ojca Wszechmogącego; stamtąd przyjdzie sądzić żywych i umarłych.\nWierzę w Ducha Świętego, święty Kościół powszechny, Świętych obcowanie, grzechów odpuszczenie, ciała zmartwychwstanie, żywot wieczny. Amen."
+      en: "I believe in God, the Father almighty, Creator of heaven and earth.\n\nI believe in Jesus Christ, His only Son, our Lord, who was conceived by the Holy Spirit, born of the Virgin Mary, suffered under Pontius Pilate, was crucified, died and was buried; He descended into hell; on the third day He rose again from the dead; He ascended into heaven, and is seated at the right hand of God the Father almighty; from there He will come to judge the living and the dead.\n\nI believe in the Holy Spirit, the holy catholic Church, the communion of saints, the forgiveness of sins, the resurrection of the body, and life everlasting. Amen.",
+      la: "Credo in Deum, Patrem omnipotentem, Creatorem caeli et terrae.\n\nEt in Iesum Christum, Filium Eius unicum, Dominum nostrum, qui conceptus est de Spiritu Sancto, natus ex Maria Virgine, passus sub Pontio Pilato, crucifixus, mortuus et sepultus; descendit ad inferos; tertia die resurrexit a mortuis; ascendit ad caelos; sedet ad dexteram Dei Patris omnipotentis; inde venturus est iudicare vivos et mortuos.\n\nCredo in Spiritum Sanctum, sanctam Ecclesiam catholicam, sanctorum communionem, remissionem peccatorum, carnis resurrectionem, vitam aeternam. Amen.",
+      pl: "Wierzę w Boga, Ojca Wszechmogącego, Stworzyciela nieba i ziemi.\n\nI w Jezusa Chrystusa, Syna Jego Jedynego, Pana naszego, który się począł z Ducha Świętego, narodził się z Maryi Panny, umęczon pod Ponckim Piłatem, ukrzyżowan, umarł i pogrzebion; zstąpił do piekieł; trzeciego dnia zmartwychwstał; wstąpił na niebiosa, siedzi po prawicy Boga Ojca Wszechmogącego; stamtąd przyjdzie sądzić żywych i umarłych.\n\nWierzę w Ducha Świętego, święty Kościół powszechny, Świętych obcowanie, grzechów odpuszczenie, ciała zmartwychwstanie, żywot wieczny. Amen."
     },
     pron: {
       la: { simple: ["KREH-doh een DEH-oom, PAH-trehm ohm-nee-poh-TEN-tehm, kreh-ah-TOH-rehm CHEH-lee et TEH-ray.", "Et een YEH-soom KRIS-toom, FEE-lee-oom EH-yoos oo-NEE-koom, DOH-mee-noom NOH-stroom, kwee kon-CHEP-toos est deh SPEE-ree-too SAHNK-toh, NAH-toos eks mah-REE-ah VEER-jee-neh, PAHS-soos soob POHN-tsyoh pee-LAH-toh, kroo-chee-FEEK-soos, MOR-too-oos et seh-POOL-toos; deh-SHEN-deet ahd een-FEH-rohs; TEHR-tsy-ah DEE-eh reh-soor-REK-seet ah MOR-too-ees; ah-SHEN-deet ahd CHEH-lohs; SEH-det ahd DEKS-teh-rahm DEH-ee PAH-trees ohm-nee-poh-TEN-tees; EEN-deh ven-TOO-roos est yoo-dee-KAH-reh VEE-vohs et MOR-too-ohs.", "KREH-doh een SPEE-ree-too SAHNK-toh, SAHNK-tahm ek-KLEH-zy-ahm kah-TOH-lee-kahm, sahnk-TOH-room kohm-moo-nee-OH-nehm, reh-mees-sy-OH-nehm pek-kah-TOH-room, KAHR-nees reh-soor-rek-tsy-OH-nehm, VEE-tahm ay-TEHR-nahm. AH-men."] },
@@ -120,7 +190,7 @@ const PRAYERS = {
     },
     pron: {
       la: { simple: ["OH mee YEH-soo, DEE-meet-teh NOH-bees DEH-bee-tah NOH-strah, LEE-beh-rah NOHS ahb EEN-yeh een-FEHR-nee, KON-dook een CHEH-loom OM-nehss AH-nee-mahs, pray-SEHR-teem EEL-lahs KWEH MAHK-see-meh een-DEH-jent mee-zeh-ree-KOR-dee-ah TOO-ah. AH-men."] },
-      pl: { simple: ["OH mooy YEH-zoo, pshe-BAHTCH nahm NAH-sheh GZHEH-hih, zah-hoh-VAI nahs ohd OH-nyah pyeh-KYEHL-neh-goh, zah-PROH-vahdsh FSHIH-stkee DOO-sheh doh NYEH-bah ee doh-POH-moosh shcheh-GOO-lyeh tihm, KTOO-zhih bar-DZYEY bar-DZYEY pɔt-sheh-BOO-yon TVOH-yeh-goh mee-WOH-shyehr-DZYAH. AH-men."] }
+      pl: { simple: ["OH mooy YEH-zoo, pshe-BAHTCH nahm NAH-sheh GZHEH-hih, zah-hoh-VAI nahs ohd OH-nyah pyeh-KYEHL-neh-goh, zah-PROH-vahdsh FSHIH-stkee DOO-sheh doh NYEH-bah ee doh-POH-moosh shcheh-GOO-lyeh tihm, KTOO-zhih bar-DZYEY pɔt-sheh-BOO-yon TVOH-yeh-goh mee-WOH-shyehr-DZYAH. AH-men."] }
     }
   },
   hail_holy_queen: {
@@ -167,20 +237,20 @@ const PRAYERS = {
       pl: "Pomnij, o Najświętsza Panno Maryjo, że nigdy nie słyszano, aby ktokolwiek, kto się do Twej opieki uciekał, Twej pomocy wzywał, Ciebie o przyczynę prosił, miał być przez Ciebie opuszczony.\nTą ufnością ożywiony, do Ciebie, o Panno nad pannami i Matko, biegnę; do Ciebie przychodzę; przed Tobą staję jako grzesznik żałujący.\nO Matko Słowa Wcielonego, nie gardź słowami moimi, ale usłysz je łaskawie i wysłuchaj. Amen."
     },
     pron: {
-      la: { simple: ["meh-moh-RAH-reh, oh pee-ISS-ee-mah VEER-goh mah-REE-ah, non ESS-eh ow-DEE-toom ah SAY-koo-loh KWEHM-kwahm ahd TOO-ah KOO-ren-tehm preh-SIH-dee-ah, TOO-ah eem-ploh-RAHN-tehm owk-SIH-lee-ah, TOO-ah peh-TEN-tehm soof-FRAH-jee-ah, ESS-eh deh-REH-lee-ktoom.", "EH-goh TAH-lee ah-nee-MAH-toos kon-fee-DEN-tsee-ah, ahd teh, VEER-goh VEER-jee-noom, MAH-tehr, KOO-roh; ahd teh VEH-nee-oh; KOH-rahm teh JEH-mehns PEHK-kah-tohr ah-SSIS-toh.", "NOH-lee, MAH-tehr VEHR-bee, VEHR-bah MEH-ah deh-SPEE-cheh-reh; sed OW-dee proh-PEE-tsee-ah et eks-OW-dee. AH-men."] },
+      la: { simple: ["meh-moh-RAH-reh, oh pee-ISS-ee-mah VEER-goh mah-REE-ah, non ESS-eh ow-DEE-toom ah SAY-koo-loh KWEHM-kwahm ahd TOO-ah KOO-ren-tehm preh-SIH-dee-ah, TOO-ah eem-ploh-RAHN-tehm owk-SIH-lee-ah, TOO-ah peh-TEN-tehm soof-FRAH-jee-ah, ESS-eh deh-REH-lee-ktoom.", "EH-go TAH-lee ah-nee-MAH-toos kon-fee-DEN-tsee-ah, ahd teh, VEER-goh VEER-jee-noom, MAH-tehr, KOO-roh; ahd teh VEH-nee-oh; KOH-rahm teh JEH-mehns PEHK-kah-tohr ah-SSIS-toh.", "NOH-lee, MAH-tehr VEHR-bee, VEHR-bah MEH-ah deh-SPEE-cheh-reh; sed OW-dee proh-PEE-tsee-ah et eks-OW-dee. AH-men."] },
       pl: { simple: ["POHM-neey, oh nay-SHVYEN-tshah PAHN-noh mah-RYO, zheh NEE-gdih nyeh swih-SHAH-no, ah-bih KTOH-kohl-vyek, ktoh sheh doh TVEY oh-PYEH-kee oo-CHYEH-kahw, TVEY poh-MOH-tsih VZII-vaw, CHYEH-byeh oh pshih-CHIH-neh PROH-sheew, MYAHW bihtch pshez CHYEH-byeh oh-poosh-CHOH-nih.", "TOH oo-FNOH-shchyon oh-zhih-VYOH-nih, doh CHYEH-byeh, oh PAHN-noh nahd pah-NAH-mee ee MAHT-koh, BYE-gneh; doh CHYEH-byeh pshih-KHOH-dzeh; pshed TOH-boh STAH-yeh YAH-koh GZHEH-shneek zhah-WOO-yonts.", "OH MAHT-koh SWO-vah fchyeh-LOH-neh-goh, nyeh GAHRDZ swo-VAH-mee MO-ee-mee, ah-leh oo-SWIH-sh yeh wah-SKAH-vyeh ee vih-SWOO-khahy. AH-men."] }
     }
   },
   angelus: {
     title: "The Angelus",
     text: {
-      en: "V. The Angel of the Lord declared unto Mary.\nR. And she conceived of the Holy Spirit.\nV. Behold the handmaid of the Lord.\nR. Be it done unto me according to thy word.\nV. And the Word was made flesh.\nR. And dwelt among us.\nV. Pray for us, O holy Mother of God.\nR. That we may be made worthy of the promises of Christ.",
-      la: "V. Angelus Domini nuntiavit Mariae.\nR. Et concepit de Spiritu Sancto.\nV. Ecce ancilla Domini.\nR. Fiat mihi secundum verbum tuum.\nV. Et Verbum caro factum est.\nR. Et habitavit in nobis.\nV. Ora pro nobis, sancta Dei Genetrix.\nR. Ut digni efficiamur promissionibus Christi.",
-      pl: "V. Anioł Pański zwiastował Pannie Maryi.\nR. I poczęła z Ducha Świętego.\nV. Oto ja służebnica Pańska.\nR. Niech mi się stanie według słowa twego.\nV. A Słowo Ciałem się stało.\nR. I mieszkało między nami.\nV. Módl się za nami, Święta Boża Rodzicielko.\nR. Abyśmy się stali godnymi obietnic Chrystusowych."
+      en: "V. The Angel of the Lord declared unto Mary.\nR. And she conceived of the Holy Spirit.\n\nHail Mary…\n\nV. Behold the handmaid of the Lord.\nR. Be it done unto me according to thy word.\n\nHail Mary…\n\nV. And the Word was made flesh.\nR. And dwelt among us.\n\nHail Mary…\n\nV. Pray for us, O holy Mother of God.\nR. That we may be made worthy of the promises of Christ.\n\nLet us pray.\nPour forth, we beseech Thee, O Lord, Thy grace into our hearts, that we, to whom the Incarnation of Christ, Thy Son, was made known by the message of an angel, may by His Passion and Cross be brought to the glory of His Resurrection. Through the same Christ our Lord. Amen.",
+      la: "V. Angelus Domini nuntiavit Mariae.\nR. Et concepit de Spiritu Sancto.\n\nAve Maria…\n\nV. Ecce ancilla Domini.\nR. Fiat mihi secundum verbum tuum.\n\nAve Maria…\n\nV. Et Verbum caro factum est.\nR. Et habitavit in nobis.\n\nAve Maria…\n\nV. Ora pro nobis, sancta Dei Genetrix.\nR. Ut digni efficiamur promissionibus Christi.\n\nOremus.\nGratiam tuam, quaesumus, Domine, mentibus nostris infunde; ut qui, Angelo nuntiante, Christi Filii tui incarnationem cognovimus, per passionem eius et crucem ad resurrectionis gloriam perducamur. Per eundem Christum Dominum nostrum. Amen.",
+      pl: "V. Anioł Pański zwiastował Pannie Maryi.\nR. I poczęła z Ducha Świętego.\n\nZdrowaś Maryjo…\n\nV. Oto ja służebnica Pańska.\nR. Niech mi się stanie według słowa twego.\n\nZdrowaś Maryjo…\n\nV. A Słowo Ciałem się stało.\nR. I mieszkało między nami.\n\nZdrowaś Maryjo…\n\nV. Módl się za nami, Święta Boża Rodzicielko.\nR. Abyśmy się stali godnymi obietnic Chrystusowych."
     },
     pron: {
-      la: { simple: ["AHN-jeh-loos DOH-mee-nee noon-tsy-AH-veet mah-REE-ay.", "Et kon-CHEP-eet deh SPEE-ree-too SAHNK-toh.", "EH-cheh ahn-CHIL-lah DOH-mee-nee.", "FEE-aht MEE-kee seh-KOON-doom VEHR-boom TOO-oom.", "Et VEHR-boom KAH-roh FAK-toom est.", "Et ah-bee-TAH-veet een NOH-bees.", "OH-rah proh NOH-bees, SAHNK-tah DEH-ee JEH-neh-triks.", "OOT DEEN-yee eh-fee-chy-AH-moor proh-mee-sy-OH-nee-boos KRIS-tee."] },
-      pl: { simple: ["AH-nyow PAH-ny-skee zv-yah-STOH-vow PAHN-nyeh mah-RYE-ee.", "ee poh-CHEH-wah z DOO-khah sh-vyen-TEH-goh.", "OH-toh yah swoo-zheh-BNEE-tsah PAHN-skah.", "nye-kh me shye STAH-nyeh VEH-dwoog SWO-vah TVEH-goh.", "ah SWO-voh CHYAH-wem sheh STAH-wo.", "ee mye-SHKAH-wo m-YEHND-zih NAH-mee.", "MOODL shye zah NAH-mee, SH-vyen-tah BOH-zhah roh-dze-CHYEH-l-koh.", "ah-BISH-me shye STAH-lee gohd-NIH-me oh-BYET-neech khris-too-SOH-vihkh."] }
+      la: { simple: ["AHN-jeh-loos DOH-mee-nee noon-tsy-AH-veet mah-REE-ay.", "Et kon-CHEP-eet deh SPEE-ree-too SAHNK-toh.", "", "EH-cheh ahn-CHIL-lah DOH-mee-nee.", "FEE-aht MEE-kee seh-KOON-doom VEHR-boom TOO-oom.", "", "Et VEHR-boom KAH-roh FAK-toom est.", "Et ah-bee-TAH-veet een NOH-bees.", "", "OH-rah proh NOH-bees, SAHNK-tah DEH-ee JEH-neh-triks.", "OOT DEEN-yee eh-fee-chy-AH-moor proh-mee-sy-OH-nee-boos KRIS-tee.", "", "oh-REH-moos.", "GRAH-tsy-ahm TOO-ahm, kway-SOO-moos, DOH-mee-neh, MEN-tee-boos NOH-strees een-FOON-deh; oot kwee, AHN-jeh-loh noon-tsy-AHN-teh, KRIS-tee FEE-lee-ee TOO-ee een-kar-nah-tsy-OH-nehm kon-YOH-vee-moos, pehr pah-sy-OH-nehm EH-yoos et KROO-chem ahd reh-soor-rek-tsy-OH-nees GLOH-ry-ahm pehr-doo-KAH-moor. Pehr eh-OON-dehm KRIS-toom DOH-mee-noom NOH-stroom. AH-men."] },
+      pl: { simple: ["AH-nyow PAH-ny-skee zv-yah-STOH-vow PAHN-nyeh mah-RYE-ee.", "ee poh-CHEH-wah z DOO-khah sh-vyen-TEH-goh.", "", "OH-toh yah swoo-zheh-BNEE-tsah PAHN-skah.", "nye-kh me shye STAH-nyeh VEH-dwoog SWO-vah TVEH-goh.", "", "ah SWO-voh CHYAH-wem sheh STAH-wo.", "ee mye-SHKAH-wo m-YEHND-zih NAH-mee.", "", "MOODL shye zah NAH-mee, SH-vyen-tah BOH-zhah roh-dze-CHYEH-l-koh.", "ah-BISH-me shye STAH-lee gohd-NIH-me oh-BYET-neech khris-too-SOH-vihkh."] }
     }
   },
   before_meals: {
@@ -224,26 +294,9 @@ const PRAYERS = {
 const ROSARY_PRAYER_KEYS = ["apostles_creed", "our_father", "hail_mary", "glory_be", "fatima", "hail_holy_queen", "vr", "rosary_prayer", "memorare"];
 const OTHER_PRAYER_KEYS = ["memorare", "angelus", "before_meals", "after_meals", "contrition"];
 
-// --- Standalone Tab System Context ---
-const TabsContext = createContext({ current: "track", set: () => {} });
-const Tabs = ({ children, defaultValue }) => {
-  const [v, setV] = useState(defaultValue);
-  return <TabsContext.Provider value={{ current: v, set: setV }}>{children}</TabsContext.Provider>;
-};
-const TabsList = ({ children, className = "" }) => <div className={`flex bg-slate-200/50 p-1 rounded-2xl mb-4 gap-1 ${className}`}>{children}</div>;
-const TabsTrigger = ({ children, value }) => {
-  const context = useContext(TabsContext);
-  const active = context.current === value;
-  return (
-    <button onClick={() => context.set(value)} className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-all ${active ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"}`}>{children}</button>
-  );
-};
-const TabsContent = ({ children, value }) => {
-  const context = useContext(TabsContext);
-  return context.current === value ? <div>{children}</div> : null;
-};
-
-// --- Main App Logic ---
+// ------------------------------
+// Main Prototype Component
+// ------------------------------
 export default function RosaryTrackerAppPrototype() {
   const [dayKey, setDayKey] = useState(todayKey());
   const [openingDone, setOpeningDone] = useState(false);
@@ -251,7 +304,7 @@ export default function RosaryTrackerAppPrototype() {
   const [dailyIntention, setDailyIntention] = useState("");
   const suggested = useMemo(() => suggestedMysteryKeyForToday(), []);
   const [startMystery, setStartMystery] = useState(suggested);
-  const [sets, setSets] = useState([{ id: 'init', createdAt: new Date().toISOString(), mystery: suggested, decades: [false, false, false, false, false] }]);
+  const [sets, setSets] = useState([emptySet(suggested)]);
   
   const [history, setHistory] = useState([]);
   const [lifetimeTotal, setLifetimeTotal] = useState(0);
@@ -264,151 +317,244 @@ export default function RosaryTrackerAppPrototype() {
   const closingEnabled = mysteriesCompleted >= 1;
   const dailyPct = Math.min(100, Math.round((totalDecadesDone / DAILY_DECADE_GOAL) * 100));
 
-  // CarPlay/Siri Logic
+  // --- CARPLAY / SIRI LOGIC ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
+
     if (action === 'markDecade') {
       setSets(prevSets => {
         const newSets = [...prevSets];
         const targetSet = newSets.find(s => s.decades.includes(false));
         if (targetSet) {
-          targetSet.decades[targetSet.decades.indexOf(false)] = true;
-          const speech = new SpeechSynthesisUtterance("Decade marked.");
+          const index = targetSet.decades.indexOf(false);
+          targetSet.decades[index] = true;
+          const speech = new SpeechSynthesisUtterance("Decade marked complete.");
           window.speechSynthesis.speak(speech);
         }
         return newSets;
       });
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+
     if (action === 'getStatus') {
       const remaining = DAILY_DECADE_GOAL - totalDecadesDone;
-      const msg = `You have completed ${totalDecadesDone} decades. You have ${remaining} left.`;
+      const msg = `You have completed ${totalDecadesDone} decades. You have ${remaining} left to reach your goal.`;
       const speech = new SpeechSynthesisUtterance(msg);
       window.speechSynthesis.speak(speech);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, [totalDecadesDone]);
 
-  // Persistent storage
+  // Initial Load
   useEffect(() => {
-    const raw = localStorage.getItem("rosary_v20_final");
-    if (raw) {
-      try {
-        const s = JSON.parse(raw);
-        setDayKey(s.dayKey ?? todayKey()); setOpeningDone(!!s.openingDone); setClosingDone(!!s.closingDone);
-        setDailyIntention(s.dailyIntention ?? ""); setStartMystery(s.startMystery ?? suggested);
-        setSets(s.sets ?? sets); setPrayerLang(s.prayerLang ?? "en");
-        setShowPron(!!s.showPron); setPronType(s.pronType ?? "simple");
-        setHistory(s.history ?? []); setLifetimeTotal(s.lifetimeTotal ?? 0);
-      } catch (e) {}
-    }
-  }, []);
+    const raw = localStorage.getItem("rosary_app_state_v6");
+    if (!raw) return;
+    try {
+      const s = JSON.parse(raw);
+      setDayKey(s.dayKey ?? todayKey()); 
+      setOpeningDone(!!s.openingDone); 
+      setClosingDone(!!s.closingDone);
+      setDailyIntention(s.dailyIntention ?? ""); 
+      setStartMystery(s.startMystery ?? suggested);
+      setSets(Array.isArray(s.sets) && s.sets.length ? s.sets : [emptySet(suggested)]);
+      setPrayerLang(s.prayerLang ?? "en"); 
+      setShowPron(!!s.showPron); 
+      setPronType(s.pronType ?? "simple");
+      setHistory(Array.isArray(s.history) ? s.history : []);
+      setLifetimeTotal(s.lifetimeTotal ?? 0);
+    } catch { }
+  }, [suggested]);
 
+  // Save State
   useEffect(() => {
-    localStorage.setItem("rosary_v20_final", JSON.stringify({ dayKey, openingDone, closingDone, dailyIntention, startMystery, sets, prayerLang, showPron, pronType, history, lifetimeTotal }));
+    localStorage.setItem("rosary_app_state_v6", JSON.stringify({ 
+      dayKey, openingDone, closingDone, dailyIntention, startMystery, sets, 
+      prayerLang, showPron, pronType, history, lifetimeTotal 
+    }));
   }, [dayKey, openingDone, closingDone, dailyIntention, startMystery, sets, prayerLang, showPron, pronType, history, lifetimeTotal]);
 
+  // Midnight Check Logic
+  useEffect(() => {
+    const id = setInterval(() => {
+      const tk = todayKey();
+      if (tk !== dayKey && closingDone) {
+        logAndResetDay();
+      }
+    }, 15_000);
+    return () => clearInterval(id);
+  }, [dayKey, closingDone]);
+
+  function addSet(mysteryKey) { setSets((prev) => [...prev, emptySet(mysteryKey)]); }
+  function updateSet(id, updater) { setSets((prev) => prev.map((s) => (s.id === id ? updater(s) : s))); }
+  
   function logAndResetDay() {
-    const daySummary = { date: dayKey, decades: totalDecadesDone, intention: dailyIntention };
-    setHistory(prev => [daySummary, ...prev].slice(0, 50));
+    const daySummary = {
+        date: dayKey,
+        decades: totalDecadesDone,
+        mysteries: sets.filter(s => s.decades.every(Boolean)).map(s => s.mystery),
+        intention: dailyIntention
+    };
+    setHistory(prev => {
+        const next = [daySummary, ...prev];
+        const twoYearsAgo = new Date();
+        twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        return next.filter(h => new Date(h.date + "T12:00:00") > twoYearsAgo);
+    });
     setLifetimeTotal(prev => prev + totalDecadesDone);
-    setDayKey(todayKey()); setOpeningDone(false); setClosingDone(false); setDailyIntention(""); 
-    setStartMystery(suggestedMysteryKeyForToday()); setSets([{ id: Date.now().toString(), createdAt: new Date().toISOString(), mystery: suggestedMysteryKeyForToday(), decades: [false, false, false, false, false] }]);
+    setDayKey(todayKey());
+    setOpeningDone(false); setClosingDone(false); setDailyIntention(""); 
+    setStartMystery(suggestedMysteryKeyForToday()); 
+    setSets([emptySet(suggestedMysteryKeyForToday())]);
+  }
+
+  function toggleClosing() {
+    const nextVal = !closingDone;
+    setClosingDone(nextVal);
+    if (nextVal === true && todayKey() !== dayKey) { logAndResetDay(); }
   }
 
   const pronAllowed = showPron && (prayerLang === "la" || prayerLang === "pl");
   const pronLabel = pronType === "ipa" ? "IPA" : "Pronunciation";
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 text-slate-900 p-4 md:p-8 font-sans">
-      <div className="mx-auto max-w-5xl text-left">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Rosary Tracker</h1>
-            <p className="text-sm text-slate-500 font-medium">Lifetime Impact: {lifetimeTotal + totalDecadesDone} Decades</p>
-            <div className="mt-2 flex gap-2"><Badge variant="outline">{formatDisplayDate(dayKey)}</Badge><Badge>{totalDecadesDone}/{DAILY_DECADE_GOAL} decades</Badge></div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={logAndResetDay} className="flex items-center px-4 py-2 rounded-xl bg-white border border-slate-200 text-sm font-bold shadow-sm active:scale-95"><RotateCcw className="h-4 w-4 mr-2" /> Reset</button>
-            <button onClick={() => setSets([...sets, { id: Date.now().toString(), createdAt: new Date().toISOString(), mystery: startMystery, decades: [false, false, false, false, false] }])} className="flex items-center px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-sm active:scale-95"><Plus className="h-4 w-4 mr-2" /> Add Set</button>
-          </div>
-        </div>
-
-        <Tabs defaultValue="track">
-          <TabsList>
-            <TabsTrigger value="track">Tracker</TabsTrigger>
-            <TabsTrigger value="stats">Stats</TabsTrigger>
-            <TabsTrigger value="rosary">Rosary</TabsTrigger>
-            <TabsTrigger value="other">Other</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="track">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card className="md:col-span-1 h-fit">
-                <CardHeader><CardTitle>Daily Goal</CardTitle></CardHeader>
-                <CardContent className="space-y-5">
-                  <div><div className="flex justify-between text-[10px] font-black uppercase text-slate-400 mb-1"><span>Progress</span><span>{dailyPct}%</span></div><Progress value={dailyPct} /></div>
-                  <div className="p-3 bg-slate-50 rounded-xl"><div className="flex items-center gap-2 mb-2 text-sm font-bold text-slate-700"><MessageSquareText className="h-4 w-4" /> Intention</div><input className="w-full bg-white border border-slate-200 rounded-lg p-2 text-sm outline-none" value={dailyIntention} onChange={(e) => setDailyIntention(e.target.value)} placeholder="..." /></div>
-                  <button onClick={() => setOpeningDone(!openingDone)} className={`w-full p-3 rounded-xl border flex items-center justify-between text-sm font-bold transition-all ${openingDone ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-white border-slate-100"}`}><span>Opening Prayers</span>{openingDone ? <CheckCircle2 className="text-emerald-500" /> : <Circle className="text-slate-200" />}</button>
-                  <button disabled={!closingEnabled} onClick={() => setClosingDone(!closingDone)} className={`w-full p-3 rounded-xl border flex items-center justify-between text-sm font-bold transition-all ${closingDone ? "bg-emerald-50 border-emerald-200 text-emerald-700" : !closingEnabled ? "opacity-40" : "bg-white border-slate-100"}`}><span>Closing Prayers</span>{closingDone ? <CheckCircle2 className="text-emerald-500" /> : !closingEnabled ? <Lock className="h-4 w-4 text-slate-400" /> : <Circle className="text-slate-200" />}</button>
-                </CardContent>
-              </Card>
-
-              <div className="md:col-span-2 space-y-4">
-                {sets.map((s, idx) => {
-                  const setDone = s.decades.filter(Boolean).length;
-                  return (
-                    <Card key={s.id}>
-                      <CardHeader><div className="flex justify-between items-center"><div className="text-sm font-bold flex items-center gap-2"><BookOpen className="h-4 w-4 text-slate-400" /> {mysteryLabel(s.mystery)} Set #{idx + 1}</div><Badge variant="outline">{setDone}/5</Badge></div><div className="mt-3"><Progress value={(setDone/5)*100} /></div></CardHeader>
-                      <CardContent className="space-y-2">
-                        {s.decades.map((done, i) => (
-                          <button key={i} onClick={() => { const n = [...s.decades]; n[i] = !n[i]; setSets(sets.map(it => it.id === s.id ? { ...it, decades: n } : it)) }} className={`w-full flex items-center justify-between p-4 rounded-xl border text-left transition-all ${done ? "bg-emerald-50 border-emerald-200" : "bg-white border-slate-100 shadow-sm"}`}>
-                            <div><div className="text-sm font-bold">{i + 1}. {MYSTERY_DECADES[s.mystery][i]}</div><div className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Decade {i+1}</div></div>
-                            {done ? <CheckCircle2 className="text-emerald-500" /> : <Circle className="text-slate-200" />}
-                          </button>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+    <div className="min-h-screen w-full bg-gradient-to-b from-slate-50 to-white p-4 md:p-8">
+      <div className="mx-auto max-w-5xl">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Rosary Tracker</h1>
+              <p className="mt-1 text-sm text-slate-600">Goal: {DAILY_DECADE_GOAL} decades/day • Lifetime: {lifetimeTotal + totalDecadesDone} decades</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="rounded-2xl">Today: {formatDisplayDate(dayKey)}</Badge>
+                <Badge className="rounded-2xl" variant={totalDecadesDone >= DAILY_DECADE_GOAL ? "default" : "outline"}>{totalDecadesDone}/{DAILY_DECADE_GOAL} decades</Badge>
               </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="stats">
-            <div className="grid gap-4 md:grid-cols-3 mb-6">
-                <Card className="bg-emerald-50 border-emerald-100 p-6 text-center"><Trophy className="h-6 w-6 text-emerald-500 mx-auto mb-2" /><div className="text-4xl font-black text-emerald-900">{lifetimeTotal + totalDecadesDone}</div><div className="text-[10px] font-black uppercase text-emerald-600 tracking-widest">Lifetime Decades</div></Card>
-                <Card className="bg-blue-50 border-blue-100 p-6 text-center"><History className="h-6 w-6 text-blue-500 mx-auto mb-2" /><div className="text-4xl font-black text-blue-900">{history.length + 1}</div><div className="text-[10px] font-black uppercase text-blue-600 tracking-widest">Days Tracked</div></Card>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="rounded-2xl" onClick={logAndResetDay}><RotateCcw className="h-4 w-4 mr-2" /> Force Reset</Button>
+              <Button className="rounded-2xl" onClick={() => addSet(startMystery)}><Plus className="h-4 w-4 mr-2" /> Add set</Button>
             </div>
-            <Card><CardHeader><CardTitle>Activity Journal</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                    <div className="flex justify-between border-b pb-2 text-[10px] font-black uppercase text-slate-400 tracking-widest"><span>Date</span><span>Total Decades</span></div>
-                    {history.map((h, i) => <div key={i} className="flex justify-between border-b border-slate-50 py-3 text-sm font-medium"><span>{formatDisplayDate(h.date)}</span><span>{h.decades} Decades</span></div>)}
-                </CardContent>
-            </Card>
-          </TabsContent>
+          </div>
 
-          <TabsContent value="rosary"><LibraryView keys={ROSARY_PRAYER_KEYS} prayerLang={prayerLang} setPrayerLang={setPrayerLang} showPron={showPron} setShowPron={setShowPron} pronType={pronType} setPronType={setPronType} pronAllowed={pronAllowed} pronLabel={pronLabel} /></TabsContent>
-          <TabsContent value="other"><LibraryView keys={OTHER_PRAYER_KEYS} prayerLang={prayerLang} setPrayerLang={setPrayerLang} showPron={showPron} setShowPron={setShowPron} pronType={pronType} setPronType={setPronType} pronAllowed={pronAllowed} pronLabel={pronLabel} /></TabsContent>
-        </Tabs>
+          <Tabs defaultValue="track" className="mt-6">
+            <TabsList className="rounded-2xl">
+              <TabsTrigger value="track">Tracker</TabsTrigger>
+              <TabsTrigger value="stats">Statistics</TabsTrigger>
+              <TabsTrigger value="rosary">Rosary Prayers</TabsTrigger>
+              <TabsTrigger value="other">Other Prayers</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="track" className="mt-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card className="md:col-span-1 rounded-2xl shadow-sm">
+                  <CardHeader><CardTitle className="text-lg">Daily Checklist</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div><div className="flex justify-between"><span className="text-sm text-slate-600">Daily progress</span><span className="text-sm font-medium">{dailyPct}%</span></div><Progress value={dailyPct} className="mt-2" /></div>
+                    <div className="rounded-2xl border p-3 bg-white"><div className="flex items-center gap-2 mb-2"><MessageSquareText className="h-4 w-4 text-slate-600" /><span className="text-sm font-medium">Daily intention</span></div><Input className="rounded-2xl" value={dailyIntention} onChange={(e) => setDailyIntention(e.target.value)} placeholder="Offer intentions..." /></div>
+                    <div className="rounded-2xl border p-3 bg-white">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">{openingDone ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-slate-400" />}<span className="text-sm font-medium">Opening prayers</span></div>
+                            <Button size="sm" className="rounded-xl" variant={openingDone ? "secondary" : "default"} onClick={() => setOpeningDone(!openingDone)}>{openingDone ? "Undo" : "Done"}</Button>
+                        </div>
+                        <ul className="mt-3 text-xs text-slate-700 list-disc pl-5 space-y-1">{OPENING_STEPS.map(s => <li key={s}>{s}</li>)}</ul>
+                    </div>
+                    <div className={`rounded-2xl border p-3 ${closingEnabled ? "bg-white" : "bg-slate-50"}`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">{closingDone ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : closingEnabled ? <Circle className="h-5 w-5 text-slate-400" /> : <Lock className="h-5 w-5 text-slate-500" />}<span className="text-sm font-medium">Closing prayers</span></div>
+                            <Button size="sm" className="rounded-xl" variant={closingDone ? "secondary" : "default"} disabled={!closingEnabled} onClick={toggleClosing}>{closingDone ? "Undo" : "Done"}</Button>
+                        </div>
+                        <ul className="mt-3 text-xs text-slate-700 list-disc pl-5 space-y-1">{CLOSING_STEPS.map(s => <li key={s}>{s}</li>)}</ul>
+                    </div>
+                    <div className="rounded-2xl border p-3 bg-white">
+                        <div className="flex items-center gap-2 mb-2"><Sparkles className="h-4 w-4 text-slate-600" /><span className="text-sm font-medium">Suggested: {mysteryLabel(suggested)}</span></div>
+                        <Select value={startMystery} onValueChange={setStartMystery}><SelectTrigger className="rounded-2xl"><SelectValue /></SelectTrigger><SelectContent>{MYSTERIES.map(m => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent></Select>
+                        <div className="mt-2 flex gap-2"><Button size="sm" variant="secondary" className="rounded-2xl" onClick={() => setStartMystery(suggested)}>Use suggested</Button><Button size="sm" className="rounded-2xl" onClick={() => addSet(startMystery)}>Add set now</Button></div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2 rounded-2xl shadow-sm">
+                  <CardHeader><CardTitle className="text-lg">Mystery Sets</CardTitle></CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-2">{MYSTERIES.map(m => <Button key={m.key} variant="secondary" className="rounded-2xl" onClick={() => addSet(m.key)}>Add {m.label}</Button>)}</div>
+                    <AnimatePresence initial={false}>
+                      {sets.map((s, idx) => {
+                        const setDone = s.decades.filter(Boolean).length;
+                        const titles = MYSTERY_DECADES[s.mystery] ?? [];
+                        return (
+                          <motion.div key={s.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="rounded-2xl border p-4 bg-white">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                              <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-slate-600" /><div className="text-sm font-medium">{mysteryLabel(s.mystery)} — Set #{idx + 1}</div><Badge className="rounded-2xl" variant={setDone === 5 ? "default" : "outline"}>{setDone}/5</Badge></div>
+                              <Select value={s.mystery} onValueChange={(v) => updateSet(s.id, (old) => ({ ...old, mystery: v }))}><SelectTrigger className="rounded-2xl md:w-[200px]"><SelectValue /></SelectTrigger><SelectContent>{MYSTERIES.map(m => <SelectItem key={m.key} value={m.key}>{m.label}</SelectItem>)}</SelectContent></Select>
+                            </div>
+                            <Progress value={(setDone / 5) * 100} className="mt-2" /><Separator className="my-4" />
+                            <div className="grid gap-2">{s.decades.map((done, i) => (
+                              <button key={i} onClick={() => updateSet(s.id, (old) => { const n = [...old.decades]; n[i] = !n[i]; return { ...old, decades: n }; })} className={`w-full rounded-2xl border p-3 text-left transition ${done ? "bg-emerald-50 border-emerald-200" : "bg-white border-slate-200"}`}>
+                                <div className="flex items-center justify-between"><div><div className="text-sm font-medium">{i + 1}. {titles[i]}</div><div className="text-xs text-slate-600">Decade {i + 1} of 5</div></div>{done ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Circle className="h-5 w-5 text-slate-400" />}</div>
+                              </button>
+                            ))}</div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="stats" className="mt-4">
+                <StatsView history={history} lifetimeTotal={lifetimeTotal} currentDecades={totalDecadesDone} currentMysteries={sets.filter(s => s.decades.every(Boolean)).map(s => s.mystery)} />
+            </TabsContent>
+
+            <TabsContent value="rosary" className="mt-4">
+              <LibraryView keys={ROSARY_PRAYER_KEYS} prayerLang={prayerLang} setPrayerLang={setPrayerLang} showPron={showPron} setShowPron={setShowPron} pronType={pronType} setPronType={setPronType} pronAllowed={pronAllowed} pronLabel={pronLabel} />
+            </TabsContent>
+
+            <TabsContent value="other" className="mt-4">
+              <LibraryView keys={OTHER_PRAYER_KEYS} prayerLang={prayerLang} setPrayerLang={setPrayerLang} showPron={showPron} setShowPron={setShowPron} pronType={pronType} setPronType={setPronType} pronAllowed={pronAllowed} pronLabel={pronLabel} />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
       </div>
     </div>
   );
 }
 
+function StatsView({ history, lifetimeTotal, currentDecades, currentMysteries }) {
+    const now = new Date();
+    const isThisMonth = (d) => new Date(d + "T12:00:00").getMonth() === now.getMonth() && new Date(d + "T12:00:00").getFullYear() === now.getFullYear();
+    const isLastMonth = (d) => {
+        const last = new Date(); last.setMonth(now.getMonth() - 1);
+        return new Date(d + "T12:00:00").getMonth() === last.getMonth() && new Date(d + "T12:00:00").getFullYear() === last.getFullYear();
+    };
+    const intentions = history.filter(h => (now - new Date(h.date + "T12:00:00")) < (180 * 24 * 60 * 60 * 1000) && h.intention?.trim());
+
+    return (
+        <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card className="rounded-2xl shadow-sm border-emerald-100 bg-emerald-50/30"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><Trophy className="h-4 w-4" /> Lifetime Impact</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{lifetimeTotal + currentDecades}</div><p className="text-xs text-slate-500">Decades</p></CardContent></Card>
+                <Card className="rounded-2xl shadow-sm border-blue-100 bg-blue-50/30"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><BarChart3 className="h-4 w-4" /> Monthly Rosaries</CardTitle></CardHeader><CardContent><div className="flex justify-between items-end"><div><div className="text-2xl font-bold">{history.filter(h => isThisMonth(h.date)).reduce((s, h) => s + (h.decades >= 5 ? 1 : 0), 0) + (currentDecades >= 5 ? 1 : 0)}</div><p className="text-xs text-slate-500">Current</p></div><div className="text-right opacity-60"><div>{history.filter(h => isLastMonth(h.date)).reduce((s, h) => s + (h.decades >= 5 ? 1 : 0), 0)}</div><p className="text-xs text-slate-500">Previous</p></div></div></CardContent></Card>
+                <Card className="rounded-2xl shadow-sm border-purple-100 bg-purple-50/30"><CardHeader className="pb-2"><CardTitle className="text-sm font-medium flex items-center gap-2"><History className="h-4 w-4" /> This Year</CardTitle></CardHeader><CardContent><div className="text-2xl font-bold">{history.filter(h => new Date(h.date + "T12:00:00").getFullYear() === now.getFullYear()).reduce((s, h) => s + (h.decades >= 5 ? 1 : 0), 0) + (currentDecades >= 5 ? 1 : 0)}</div></CardContent></Card>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card className="rounded-2xl shadow-sm"><CardHeader><CardTitle className="text-lg">Last 7 Days (Decades)</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between text-sm py-1 font-medium bg-slate-50 px-2 rounded"><span>{formatDisplayDate(todayKey())}</span><span>{currentDecades}</span></div>{history.filter(h => (now - new Date(h.date + "T12:00:00")) < (7 * 24 * 60 * 60 * 1000)).map(h => (<div key={h.date} className="flex justify-between text-sm py-1 px-2 border-b"><span>{formatDisplayDate(h.date)}</span><span>{h.decades}</span></div>))}</CardContent></Card>
+                <Card className="rounded-2xl shadow-sm"><CardHeader><CardTitle className="text-lg">Intentions (6 Months)</CardTitle></CardHeader><CardContent className="grid gap-2">{intentions.map((h, i) => (<div key={i} className="p-3 rounded-xl border bg-slate-50/50"><div className="text-[10px] font-bold text-slate-400">{formatDisplayDate(h.date)}</div><div className="text-sm mt-1 italic">"{h.intention}"</div></div>))}</CardContent></Card>
+            </div>
+        </div>
+    );
+}
+
 function LibraryView({ keys, prayerLang, setPrayerLang, showPron, setShowPron, pronType, setPronType, pronAllowed, pronLabel }) {
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap gap-2 items-center">
-          <select value={prayerLang} onChange={(e) => setPrayerLang(e.target.value)} className="bg-white border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none">{['en','la','pl'].map(l => <option key={l} value={l}>{l.toUpperCase()}</option>)}</select>
-          <button onClick={() => setShowPron(!showPron)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-black tracking-widest transition-all ${showPron ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-500 border-slate-200"}`}><Mic2 className="h-3 w-3" /> PRONUNCIATION</button>
-          <select value={pronType} onChange={(e) => setPronType(e.target.value)} className="bg-white border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none"><option value="simple">SIMPLE</option><option value="ipa">IPA</option></select>
+    <Card className="rounded-2xl shadow-sm">
+      <CardHeader><CardTitle className="flex items-center gap-2"><Languages className="h-5 w-5" /> Prayer Library</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          <Select value={prayerLang} onValueChange={setPrayerLang}><SelectTrigger className="rounded-2xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="en">English</SelectItem><SelectItem value="la">Latin</SelectItem><SelectItem value="pl">Polish</SelectItem></SelectContent></Select>
+          <div className="flex items-center justify-between rounded-2xl border p-3 bg-white"><div className="flex items-center gap-2"><Mic2 className="h-4 w-4 text-slate-600" /><span className="text-sm">Pronunciation</span></div><Switch checked={showPron} onCheckedChange={setShowPron} /></div>
+          <Select value={pronType} onValueChange={setPronType}><SelectTrigger className="rounded-2xl"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="simple">Simple</SelectItem><SelectItem value="ipa">IPA</SelectItem></SelectContent></Select>
         </div>
-      </CardHeader>
-      <CardContent className="p-6">
-        {keys.map(k => <PrayerBlock key={k} title={PRAYERS[k].title} body={PRAYERS[k].text[prayerLang]} pron={PRAYERS[k].pron?.[prayerLang]?.[pronType]} showPron={pronAllowed} pronLabel={pronLabel} />)}
+        <Separator /><div className="space-y-4">{keys.map(k => <PrayerBlock key={k} title={PRAYERS[k].title} body={PRAYERS[k].text[prayerLang]} pron={PRAYERS[k].pron?.[prayerLang]?.[pronType]} showPron={pronAllowed} pronLabel={pronLabel} />)}</div>
       </CardContent>
     </Card>
   );
