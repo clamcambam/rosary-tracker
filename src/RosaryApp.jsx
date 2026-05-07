@@ -27,8 +27,6 @@ const MYSTERY_DECADES = {
   glorious: ["The Resurrection", "The Ascension", "The Descent of the Holy Spirit", "The Assumption", "The Coronation of Mary"],
   luminous: ["The Baptism of the Lord", "The Wedding Feast at Cana", "The Proclamation of the Kingdom", "The Transfiguration", "The Institution of the Eucharist"],
 };
-const OPENING_STEPS = ["The Apostles’ Creed", "1 Our Father (for the intentions of the Pope)", "3 Hail Marys (for an increase in Faith, Hope, & Charity)", "1 Glory Be", "Offer intentions"];
-const CLOSING_STEPS = ["Salve Regina (Hail Holy Queen)", "V. Pray for us, O holy Mother of God. / R. That we may be made worthy of the promises of Christ.", "Rosary Prayer (Let us pray…)", "The Memorare"];
 
 // --- Helpers ---
 function todayKey() {
@@ -51,9 +49,6 @@ function emptySet(mystery) {
   return { id: crypto.randomUUID(), createdAt: new Date().toISOString(), mystery, decades: [false, false, false, false, false] };
 }
 
-// ------------------------------
-// Main Component
-// ------------------------------
 export default function RosaryTrackerApp() {
   const [dayKey, setDayKey] = useState(todayKey());
   const [openingDone, setOpeningDone] = useState(false);
@@ -73,7 +68,6 @@ export default function RosaryTrackerApp() {
   const closingEnabled = useMemo(() => sets.some(s => s.decades.every(Boolean)), [sets]);
   const dailyPct = Math.min(100, Math.round((totalDecadesDone / DAILY_DECADE_GOAL) * 100));
 
-  // --- Voice Feedback & Notifications ---
   const speak = (text) => {
     const speech = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
@@ -90,7 +84,6 @@ export default function RosaryTrackerApp() {
     }
   };
 
-  // --- Siri / CarPlay / Fitbit Logic ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
@@ -102,11 +95,9 @@ export default function RosaryTrackerApp() {
           const updatedSet = { ...prevSets[setIndex], decades: [...prevSets[setIndex].decades] };
           const decadeIndex = updatedSet.decades.indexOf(false);
           updatedSet.decades[decadeIndex] = true;
-
           const newSets = [...prevSets];
           newSets[setIndex] = updatedSet;
           const newTotal = newSets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0);
-
           speak(`Decade marked. Total: ${newTotal}.`);
           sendFitbitAlert("Rosary Progress", `Decade marked! Today: ${newTotal}/${DAILY_DECADE_GOAL}`);
           return newSets;
@@ -125,7 +116,6 @@ export default function RosaryTrackerApp() {
     }
   }, [totalDecadesDone, dayKey, mirrorToFitbit]);
 
-  // Storage and Reset Logic...
   useEffect(() => {
     const raw = localStorage.getItem("rosary_app_v10");
     if (raw) {
@@ -237,7 +227,6 @@ export default function RosaryTrackerApp() {
   );
 }
 
-// --- Sub-Components ---
 function StatsView({ history, lifetimeTotal, currentDecades }) {
     return (
         <div className="space-y-4">
