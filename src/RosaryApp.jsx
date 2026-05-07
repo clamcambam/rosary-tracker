@@ -317,34 +317,55 @@ export default function RosaryTrackerAppPrototype() {
   const closingEnabled = mysteriesCompleted >= 1;
   const dailyPct = Math.min(100, Math.round((totalDecadesDone / DAILY_DECADE_GOAL) * 100));
 
-  // --- CARPLAY / SIRI LOGIC ---
+// --- FINAL CARPLAY / SIRI LOGIC WITH IMPROVED VOICE ---
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
 
+    // Helper to get a better-sounding voice (Samantha or Siri)
+    const speakWithBestVoice = (text) => {
+      const speech = new SpeechSynthesisUtterance(text);
+      const voices = window.speechSynthesis.getVoices();
+      // Look for "Premium", "Enhanced", or "Siri" voices
+      const premiumVoice = voices.find(v => 
+        (v.name.includes("Premium") || v.name.includes("Enhanced") || v.name.includes("Siri")) && v.lang.startsWith("en")
+      );
+      if (premiumVoice) speech.voice = premiumVoice;
+      speech.rate = 0.9; // Slightly slower for better clarity in the car
+      window.speechSynthesis.speak(speech);
+    };
+
     if (action === 'markDecade') {
       setSets(prevSets => {
-        const newSets = [...prevSets];
-        const targetSet = newSets.find(s => s.decades.includes(false));
-        if (targetSet) {
-          const index = targetSet.decades.indexOf(false);
-          targetSet.decades[index] = true;
-          const speech = new SpeechSynthesisUtterance("Decade marked complete.");
-          window.speechSynthesis.speak(speech);
+        const setIndex = prevSets.findIndex(s => s.decades.includes(false));
+        if (setIndex !== -1) {
+          const updatedSet = { ...prevSets[setIndex], decades: [...prevSets[setIndex].decades] };
+          const decadeIndex = updatedSet.decades.indexOf(false);
+          updatedSet.decades[decadeIndex] = true;
+
+          const newSets = [...prevSets];
+          newSets[setIndex] = updatedSet;
+          
+          // Calculate new total immediately for the voice
+          const newTotal = newSets.reduce((sum, s) => sum + s.decades.filter(Boolean).length, 0);
+          speakWithBestVoice(`Decade marked. You have completed ${newTotal} today.`);
+          
+          return newSets;
         }
-        return newSets;
+        return prevSets;
       });
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
     if (action === 'getStatus') {
-      const remaining = DAILY_DECADE_GOAL - totalDecadesDone;
-      const msg = `You have completed ${totalDecadesDone} decades. You have ${remaining} left to reach your goal.`;
-      const speech = new SpeechSynthesisUtterance(msg);
-      window.speechSynthesis.speak(speech);
+      // Force a tiny delay to ensure Safari has loaded the latest data from storage
+      setTimeout(() => {
+        const msg = `Status update: ${totalDecadesDone} decades completed. ${DAILY_DECADE_GOAL - totalDecadesDone} remaining.`;
+        speakWithBestVoice(msg);
+      }, 100);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [totalDecadesDone]);
+  }, [totalDecadesDone, dayKey]);
 
   // Initial Load
   useEffect(() => {
