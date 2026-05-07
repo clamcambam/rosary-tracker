@@ -156,8 +156,20 @@ export const PRAYERS = {
       la: { simple: ["DEH-oos MEH-oos, eks TOH-toh KOR-deh PEH-nee-tet meh OHM-nee-oom pek-kah-TOH-room meh-OH-room, ay-AH-kway deh-TES-tor, KWY-ah pek-KAHN-doh nohn SOH-loom PAY-nahs ah teh YOOS-teh stah-TOO-tahs pro-MEH-ree-toos soom, sed pry-SEHR-teem KWY-ah of-FEN-dee teh, SOOM-moom BOH-noom ahk DEEN-yoom, kwee SOO-pehr OHM-nyah dee-LEE-gah-rees.", "ee-DEH-oh FEER-mee-tehr pro-POH-noh, ad-yoo-VAHN-teh GRAH-tsy-ah TOO-ah, deh CHEH-teh-roh meh nohn pek-kah-TOO-room, pek-kahn-DEE-kway ok-kah-zy-OH-nehs PROK-see-mahs foo-jee-TOO-room. AH-men."] },
       pl: { simple: ["BOH-zheh mooy, zhah-WOO-yeh z tsah-WEH-goh SEHR-tsah zah GZHEH-khy MO-yeh ee BZHIH-dzeh sheh NYEE-mee, pon-yeh-VAH-sh ob-rah-ZEE-wem CHYE-bye, nay-VISH-sheh DOH-bro ee nay-BAHR-dzey GOH-dneh mee-WOH-shchee.", "pos-tah-NAH-vyahm MOTS-no z poh-MOH-tson WAH-skee TVO-yey poh-PRAH-veh ZHIH-chah, oo-NYE-katch oh-KAH-zyee doh GZHEH-khoo ee CHY-neetch poh-KOO-teh. AH-men."] }
     }
+  },
+  confiteor: {
+    title: "The Confiteor",
+    text: {
+      en: "I confess to Almighty God, to blessed Mary ever Virgin, to blessed Michael the Archangel, to blessed John the Baptist, to the holy Apostles Peter and Paul, to all the Saints, and to you Father, that I have sinned exceedingly, in thought, word and deed: through my fault, through my fault, through my most grievous fault [Striking Breast x3]. Therefore I beseech blessed Mary ever Virgin, blessed Michael the Archangel, blessed John the Baptist, the holy Apostles Peter and Paul, all the Saints, and You Father, to pray to the Lord our God for me. Amen.",
+      la: "Confiteor Deo omnipotenti, beatæ Mariæ semper Virgini, beato Michaeli Archangelo, beato Ioanni Baptistæ, sanctis Apostolis Petro et Paulo, omnibus Sanctis, et tibi, pater: quia peccavi nimis cogitatione, verbo et opere: mea culpa, mea culpa, mea maxima culpa. Ideo precor beatam Mariam semper Virginem, beatum Michaelem Archangelum, beatum Ioannem Baptistam, sanctos Apostolos Petrum et Paulum, omnes Sanctos, et te pater, orare pro me ad Dominum Deum nostrum. Amen.",
+      pl: "Spowiadam się Bogu wszechmogącemu i wam, bracia i siostry, że bardzo zgrzeszyłem myślą, mową, uczynkiem i zaniedbaniem: moja wina, moja wina, moja bardzo wielka wina. Przeto błagam Najświętszą Maryję, zawsze Dziewicę, wszystkich Aniołów i Świętych, i was, bracia i siostry, o modlitwę za mnie do Pana Boga naszego. Amen."
+    },
+    pron: {
+      la: { simple: ["Con-fee-teh-or Deh-oh om-nee-po-ten-tee Beh-ah-teh Mah-ree-eh sem-pehr Veer-jee-nee Beh-ah-to Mee-kah-eh-lee Ark-ahn-jeh-lo Beh-ah-to Yo-ahn- nee Bahp-tees-teh Sahnk-tees Ah-pos-toh-lees Peh-tro et Pow-lo Om-nee-boos Sahnk-tees, et tee-bee, pah-tehr Kwee-ah pek-kah-vee nee-mees co-jee-tah-tzee-oh-neh Vehr-bo et oh-peh-reh Meh-ah kool-pah, meh-ah kool-pah, meh-ah mahk-see-mah kool-pah Ee-deh-oh preh-kohr beh-ah-tahm Mah-ree-ahm sem-pehr Veer-jee-nem Oh-rah-reh pro meh ahd Doh-mee-noom Deh-oom nos-troom"] },
+      pl: { simple: ["Spo-vyah-dahm shy-eh Bo-goo vsheh-mo-gohn-tseh-moo ee vahm, brah-tshah ee shyos-try, zheh bar-dzo zgreh-shy-wem mish-lohn, mo-vohn, oo-tchyn-kyem ee zah-nyed-bah-nyem: mo-yah vee-nah, mo-yah vee-nah, mo-yah bar-dzo vyel-kah vee-nah. Psheh-to bwah-gahm Nie-shvyen-tshohn Mah-ry-yeh, zahv-sheh Jyeh-vee-tseh, vshys-teekh Ah-nyo-woof ee Shvyen-tykh, ee vahm, brah-tshah ee shyos-try, oh mod-leet-veh zah mnyeh doh Pah-nah Bo-gah nah-sheh-go. Ah-men."] }
+    }
   }
 };
 
 export const ROSARY_PRAYER_KEYS = ["apostles_creed", "our_father", "hail_mary", "glory_be", "fatima", "hail_holy_queen", "vr", "rosary_prayer", "memorare"];
-export const OTHER_PRAYER_KEYS = ["memorare", "angelus", "before_meals", "after_meals", "contrition"];
+export const OTHER_PRAYER_KEYS = ["memorare", "angelus", "before_meals", "after_meals", "contrition", "confiteor"];
